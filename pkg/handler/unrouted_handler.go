@@ -210,6 +210,14 @@ func (handler *UnroutedHandler) Middleware(h http.Handler) http.Handler {
 			r.Method = newMethod
 		}
 
+		// Why? I don't know why! but if the client send wrong `Content-Length` value
+		// handler.log will return all body! and also the point is why we have a body in the `method` ?!
+		// Weird :)
+		if len(r.Method) > 7 {
+			handler.sendResp(w, r, http.StatusBadRequest)
+			return
+		}
+
 		handler.log("RequestIncoming", "method", r.Method, "path", r.URL.Path, "requestId", getRequestId(r))
 
 		handler.Metrics.incRequestsTotal(r.Method)
@@ -332,6 +340,11 @@ func (handler *UnroutedHandler) PostFile(w http.ResponseWriter, r *http.Request)
 	// Parse metadata
 	meta := ParseMetadataHeader(r.Header.Get("Upload-Metadata"))
 
+	// Bucket info
+	// Will replace by the middleware
+	bucketName := r.Header.Get("X-Bucket-Name")
+	bucketPath := r.Header.Get("X-Bucket-Path")
+
 	info := FileInfo{
 		Size:           size,
 		SizeIsDeferred: sizeIsDeferred,
@@ -339,6 +352,8 @@ func (handler *UnroutedHandler) PostFile(w http.ResponseWriter, r *http.Request)
 		IsPartial:      isPartial,
 		IsFinal:        isFinal,
 		PartialUploads: partialUploadIDs,
+		BucketName:     bucketName,
+		BucketPath:     bucketPath,
 	}
 
 	if handler.config.PreUploadCreateCallback != nil {
@@ -435,7 +450,12 @@ func (handler *UnroutedHandler) HeadFile(w http.ResponseWriter, r *http.Request)
 		defer lock.Unlock()
 	}
 
-	upload, err := handler.composer.Core.GetUpload(ctx, id)
+	// Bucket info
+	// Will replace by the middleware
+	bucketName := r.Header.Get("X-Bucket-Name")
+	bucketPath := r.Header.Get("X-Bucket-Path")
+
+	upload, err := handler.composer.Core.GetUploadByCustomBucket(ctx, bucketName, bucketPath, id)
 	if err != nil {
 		handler.sendError(w, r, err)
 		return
@@ -512,7 +532,12 @@ func (handler *UnroutedHandler) PatchFile(w http.ResponseWriter, r *http.Request
 		defer lock.Unlock()
 	}
 
-	upload, err := handler.composer.Core.GetUpload(ctx, id)
+	// Bucket info
+	// Will replace by the middleware
+	bucketName := r.Header.Get("X-Bucket-Name")
+	bucketPath := r.Header.Get("X-Bucket-Path")
+
+	upload, err := handler.composer.Core.GetUploadByCustomBucket(ctx, bucketName, bucketPath, id)
 	if err != nil {
 		handler.sendError(w, r, err)
 		return
@@ -939,7 +964,9 @@ func (handler *UnroutedHandler) sendError(w http.ResponseWriter, r *http.Request
 // sendResp writes the header to w with the specified status code.
 func (handler *UnroutedHandler) sendResp(w http.ResponseWriter, r *http.Request, status int) {
 	w.WriteHeader(status)
-
+	if len(r.Method) > 7 {
+		r.Method = http.MethodOptions
+	}
 	handler.log("ResponseOutgoing", "status", strconv.Itoa(status), "method", r.Method, "path", r.URL.Path, "requestId", getRequestId(r))
 }
 

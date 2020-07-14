@@ -15,6 +15,9 @@ func (store zeroStore) NewUpload(ctx context.Context, info FileInfo) (Upload, er
 func (store zeroStore) GetUpload(ctx context.Context, id string) (Upload, error) {
 	return nil, nil
 }
+func (store zeroStore) GetUploadByCustomBucket(ctx context.Context, bucketName, bucketPath, id string) (Upload, error) {
+	return nil, nil
+}
 
 func TestConfig(t *testing.T) {
 	a := assert.New(t)

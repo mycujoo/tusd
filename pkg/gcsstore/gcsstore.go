@@ -61,27 +61,43 @@ func (store GCSStore) NewUpload(ctx context.Context, info handler.FileInfo) (han
 		info.ID = uid.Uid()
 	}
 
+	var bucketName = info.BucketName
+	if bucketName == "" {
+		// Then use default bucket's name
+		bucketName = store.Bucket
+	}
+
 	info.Storage = map[string]string{
-		"Type":   "gcsstore",
-		"Bucket": store.Bucket,
-		"Key":    store.keyWithPrefix(info.ID),
+		"Type":       "gcsstore",
+		"Bucket":     bucketName,
+		"BucketPath": info.BucketPath,
+		"Key":        store.keyWithPrefix(info.ID),
 	}
 
-	err := store.writeInfo(ctx, store.keyWithPrefix(info.ID), info)
+	err := store.writeInfo(ctx, store.keyWithPrefix(info.BucketPath+"/"+info.ID), info)
 	if err != nil {
-		return &gcsUpload{info.ID, &store}, err
+		return &gcsUpload{info.ID, store}, err
 	}
 
-	return &gcsUpload{info.ID, &store}, nil
+	uploadInfo := &gcsUpload{info.ID, store}
+	uploadInfo.store.Bucket = info.BucketName
+	uploadInfo.store.ObjectPrefix = info.BucketPath
+	return uploadInfo, nil
 }
 
 type gcsUpload struct {
 	id    string
-	store *GCSStore
+	store GCSStore
+}
+
+func (store GCSStore) GetUploadByCustomBucket(ctx context.Context, bucketName, basePath, id string) (handler.Upload, error) {
+	store.Bucket = bucketName
+	store.ObjectPrefix = basePath
+	return &gcsUpload{id, store}, nil
 }
 
 func (store GCSStore) GetUpload(ctx context.Context, id string) (handler.Upload, error) {
-	return &gcsUpload{id, &store}, nil
+	return &gcsUpload{id, store}, nil
 }
 
 func (store GCSStore) AsTerminatableUpload(upload handler.Upload) handler.TerminatableUpload {
@@ -243,7 +259,7 @@ func (store GCSStore) writeInfo(ctx context.Context, id string, info handler.Fil
 
 	i := fmt.Sprintf("%s.info", id)
 	params := GCSObjectParams{
-		Bucket: store.Bucket,
+		Bucket: info.BucketName,
 		ID:     i,
 	}
 

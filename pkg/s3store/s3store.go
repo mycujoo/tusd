@@ -232,6 +232,11 @@ func (store S3Store) NewUpload(ctx context.Context, info handler.FileInfo) (hand
 	return upload, nil
 }
 
+func (store S3Store) GetUploadByCustomBucket(ctx context.Context, bucketName, basePath, id string) (handler.Upload, error) {
+	fmt.Println("Not Implemented!")
+	return nil, nil
+}
+
 func (store S3Store) GetUpload(ctx context.Context, id string) (handler.Upload, error) {
 	return &s3Upload{id, &store, nil}, nil
 }

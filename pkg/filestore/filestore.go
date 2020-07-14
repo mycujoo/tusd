@@ -85,6 +85,11 @@ func (store FileStore) NewUpload(ctx context.Context, info handler.FileInfo) (ha
 	return upload, nil
 }
 
+func (store FileStore) GetUploadByCustomBucket(ctx context.Context, bucketName, basePath, id string) (handler.Upload, error) {
+	fmt.Println("Not Implemented!")
+	return nil, nil
+}
+
 func (store FileStore) GetUpload(ctx context.Context, id string) (handler.Upload, error) {
 	info := handler.FileInfo{}
 	data, err := ioutil.ReadFile(store.infoPath(id))

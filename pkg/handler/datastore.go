@@ -31,6 +31,11 @@ type FileInfo struct {
 	// store is used. This map may also be nil.
 	Storage map[string]string
 
+	// Destination bucket name will replace the value of Storage["Bucket"]
+	// Useful for GCS
+	BucketName string
+	BucketPath string
+
 	// stopUpload is the cancel function for the upload's context.Context. When
 	// invoked it will interrupt the writes to DataStore#WriteChunk.
 	stopUpload context.CancelFunc
@@ -86,6 +91,8 @@ type DataStore interface {
 	NewUpload(ctx context.Context, info FileInfo) (upload Upload, err error)
 
 	GetUpload(ctx context.Context, id string) (upload Upload, err error)
+
+	GetUploadByCustomBucket(ctx context.Context, bucketName, basePath, id string) (upload Upload, err error)
 }
 
 type TerminatableUpload interface {
