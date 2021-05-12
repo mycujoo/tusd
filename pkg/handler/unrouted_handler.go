@@ -872,7 +872,12 @@ func (handler *UnroutedHandler) DelFile(w http.ResponseWriter, r *http.Request) 
 		defer lock.Unlock()
 	}
 
-	upload, err := handler.composer.Core.GetUpload(ctx, id)
+	// Bucket info
+	// Will replace by the middleware
+	bucketName := r.Header.Get("X-Bucket-Name")
+	bucketPath := r.Header.Get("X-Bucket-Path")
+
+	upload, err := handler.composer.Core.GetUploadByCustomBucket(ctx, bucketName, bucketPath, id)
 	if err != nil {
 		handler.sendError(w, r, err)
 		return
